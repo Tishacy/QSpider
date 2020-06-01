@@ -3,6 +3,7 @@ import time
 from queue import Queue
 from threading import Lock, Thread
 from abc import ABC, abstractmethod
+import itertools
 
 from .utils import *
 
@@ -56,16 +57,15 @@ class Task(ABC):
         """Run method in a task"""
 
     def __str__(self):
-        return str(self.task_source)
+        return "Task{source=%s}" %(str(self.task_source))
 
 
 class Worker(Thread):
     """Worker"""
-    def __init__(self, task_queue, res_queue=None, start_time=time.time()):
+    def __init__(self, task_queue, res_queue=None):
         Thread.__init__(self)
         self.task_queue = task_queue
         self.res_queue = res_queue
-        self.start_time = start_time
     
     def run(self):
         while True:
@@ -75,19 +75,30 @@ class Worker(Thread):
 
             try:
                 res = task.run()
-                # print("\r[%d] %s" %(self.task_queue.qsize, task), end="")
-                display_progress(self.start_time, 
-                                 self.task_queue.tot_size - self.task_queue.qsize, 
-                                 self.task_queue.tot_size, 
-                                 desc='[Prog]')
                 self.task_queue.task_done()
                 
                 if self.res_queue:
                     self.res_queue.put(res)
             except Exception as e:
                 self.task_queue.add(task)
-                print("[Error] Task went wrong and added it into task queue: %s" %(task))
+                print("[ ⚠✗ ] Task went wrong and added it into task queue: %s" %(task))
 
+class Timer(Thread):
+    def __init__(self, tot_size, res_queue, fps=0.1):
+        Thread.__init__(self)
+        self.tot_size = tot_size
+        self.res_queue = res_queue
+        self.fps = fps
+
+    def run(self):
+        start_time = time.time()
+        for desc in itertools.cycle('←↖↑↗→↘↓↙'):
+            cur_size = self.res_queue.qsize()
+            desc = desc if cur_size < self.tot_size else '✔️'
+            display_progress(start_time, cur_size, self.tot_size, prog_char='●', desc='[ %s ]' %desc)
+            if (cur_size == self.tot_size):
+                break
+            time.sleep(self.fps)
 
 class QSpider:
     def __init__(self, source, 
@@ -108,14 +119,17 @@ class QSpider:
     def crawl(self):
         print("[Info] %d tasks in total." %(len(self.tasks)))
         self.num_threads = self.num_threads or self._get_num_threads()
-        start_time = time.time()
+
+        timer = Timer(self.task_queue.tot_size, self.res_queue, fps=.1)
+        timer.start()
 
         workers = []
         for i in range(self.num_threads):
-            worker = Worker(self.task_queue, self.res_queue, start_time)
+            worker = Worker(self.task_queue, self.res_queue)
             worker.start()
             workers.append(worker)
-
+        
+        timer.join()
         for worker in workers:
             worker.join()
 
