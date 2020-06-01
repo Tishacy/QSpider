@@ -84,16 +84,17 @@ class Worker(Thread):
                 print("[ ⚠✗ ] Task went wrong and added it into task queue: %s" %(task))
 
 class Timer(Thread):
-    def __init__(self, tot_size, res_queue, fps=0.1):
+    def __init__(self, task_queue, res_queue, fps=0.1):
         Thread.__init__(self)
-        self.tot_size = tot_size
+        self.task_queue = task_queue
+        self.tot_size = task_queue.tot_size
         self.res_queue = res_queue
         self.fps = fps
 
     def run(self):
         start_time = time.time()
         for desc in itertools.cycle('←↖↑↗→↘↓↙'):
-            cur_size = self.res_queue.qsize()
+            cur_size = self.res_queue.qsize() if self.res_queue else (self.tot_size - self.task_queue.qsize)
             desc = desc if cur_size < self.tot_size else '✔️'
             display_progress(start_time, cur_size, self.tot_size, prog_char='●', desc='[ %s ]' %desc)
             if (cur_size == self.tot_size):
@@ -120,7 +121,7 @@ class QSpider:
         print("[Info] %d tasks in total." %(len(self.tasks)))
         self.num_threads = self.num_threads or self._get_num_threads()
 
-        timer = Timer(self.task_queue.tot_size, self.res_queue, fps=.1)
+        timer = Timer(self.task_queue, self.res_queue, fps=.1)
         timer.start()
 
         workers = []
