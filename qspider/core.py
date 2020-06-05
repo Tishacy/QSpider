@@ -4,8 +4,12 @@ from queue import Queue
 from threading import Lock, Thread
 from abc import ABC, abstractmethod
 import itertools
+from colorama import init
+from termcolor import colored
 
 from .utils import *
+
+init()
 
 class TaskQueue:
     """Task Queue class
@@ -14,6 +18,7 @@ class TaskQueue:
         self.queue = Queue()
         self.lock = Lock()
         self.qsize = 0
+        self.num_task_done = 0
         for task in tasks:
             self.add(task)
         self.tot_size = self.qsize
@@ -45,8 +50,8 @@ class TaskQueue:
     
     def task_done(self):
         """Indicate that a formerly enqueued task is complete."""
-        return self.queue.task_done()
-    
+        self.num_task_done += 1
+
 
 class Task(ABC):
     def __init__(self, task_source):
@@ -74,29 +79,28 @@ class Worker(Thread):
                 break
 
             try:
-                res = task.run()
-                self.task_queue.task_done()
-                
+                res = task.run()                
                 if self.res_queue:
                     self.res_queue.put(res)
+                self.task_queue.task_done()
             except Exception as e:
                 self.task_queue.add(task)
-                print("[ ⚠✗ ] Task went wrong and added it into task queue: %s" %(task))
+                print("%s Task went wrong and added it into task queue: %s" %(ERROR, task))
 
 class Timer(Thread):
-    def __init__(self, task_queue, res_queue, fps=0.1):
+    def __init__(self, task_queue, fps=0.1):
         Thread.__init__(self)
         self.task_queue = task_queue
         self.tot_size = task_queue.tot_size
-        self.res_queue = res_queue
         self.fps = fps
 
     def run(self):
         start_time = time.time()
-        for desc in itertools.cycle('←↖↑↗→↘↓↙'):
-            cur_size = self.res_queue.qsize() if self.res_queue else (self.tot_size - self.task_queue.qsize)
-            desc = desc if cur_size < self.tot_size else '✔️'
-            display_progress(start_time, cur_size, self.tot_size, prog_char='●', desc='[ %s ]' %desc)
+        for desc in itertools.cycle(PROGRESS_DESCS):
+            cur_size = self.task_queue.num_task_done
+            desc = desc if cur_size < self.tot_size else DONE_DESC
+            # desc = colored("[ %s ]" %(desc), 'green')
+            display_progress(start_time, cur_size, self.tot_size, prog_char='█', desc=desc)
             if (cur_size == self.tot_size):
                 break
             time.sleep(self.fps)
@@ -104,7 +108,7 @@ class Timer(Thread):
 class QSpider:
     def __init__(self, source, 
                  task_cls, 
-                 has_result=False, 
+                 has_result=False,
                  num_threads=None):
     
         self.source = source
@@ -115,13 +119,12 @@ class QSpider:
         self.tasks = [self.task_cls(src_item) for src_item in self.source]
         self.task_queue = TaskQueue(self.tasks)
         self.res_queue = Queue() if has_result else None
-        print("[Info] QSpider is ready.")
 
     def crawl(self):
-        print("[Info] %d tasks in total." %(len(self.tasks)))
+        print("%s %d tasks in total." %(INFO, len(self.tasks)))
         self.num_threads = self.num_threads or self._get_num_threads()
 
-        timer = Timer(self.task_queue, self.res_queue, fps=.1)
+        timer = Timer(self.task_queue, fps=.1)
         timer.start()
 
         workers = []
@@ -144,7 +147,8 @@ class QSpider:
         return self.tasks[index].run()
 
     def _get_num_threads(self):
-        num_threads_str = input("[Input] Number of threads: ")
+        print(INPUT, end="")
+        num_threads_str = input(" Number of threads: ")
         return int(num_threads_str)
 
 
