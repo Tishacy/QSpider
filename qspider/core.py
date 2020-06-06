@@ -67,10 +67,11 @@ class Task(ABC):
 
 class Worker(Thread):
     """Worker"""
-    def __init__(self, task_queue, res_queue=None):
+    def __init__(self, task_queue, res_queue=None, failed_queue=None):
         Thread.__init__(self)
         self.task_queue = task_queue
         self.res_queue = res_queue
+        self.failed_queue = failed_queue
     
     def run(self):
         while True:
@@ -84,8 +85,13 @@ class Worker(Thread):
                     self.res_queue.put(res)
                 self.task_queue.task_done()
             except Exception as e:
-                self.task_queue.add(task)
-                print("%s Task went wrong and added it into task queue: %s" %(ERROR, task))
+                if self.failed_queue:
+                    self.failed_queue.add(task)
+                    self.task_queue.task_done()
+                    print("%s Task went wrong and added it into failed queue: %s" %(ERROR, task))
+                else:
+                    self.task_queue.add(task)
+                    print("%s Task went wrong and added it into task queue: %s" %(ERROR, task))
 
 class Timer(Thread):
     def __init__(self, task_queue, fps=0.1):
@@ -109,7 +115,8 @@ class QSpider:
     def __init__(self, source, 
                  task_cls, 
                  has_result=False,
-                 num_threads=None):
+                 num_threads=None,
+                 add_failed=True):
     
         self.source = source
         self.task_cls = task_cls
@@ -119,6 +126,7 @@ class QSpider:
         self.tasks = [self.task_cls(src_item) for src_item in self.source]
         self.task_queue = TaskQueue(self.tasks)
         self.res_queue = Queue() if has_result else None
+        self.failed_queue = TaskQueue() if not add_failed else None
 
     def crawl(self):
         print("%s %d tasks in total." %(INFO, len(self.tasks)))
@@ -129,13 +137,22 @@ class QSpider:
 
         workers = []
         for i in range(self.num_threads):
-            worker = Worker(self.task_queue, self.res_queue)
+            worker = Worker(self.task_queue, self.res_queue, self.failed_queue)
             worker.start()
             workers.append(worker)
         
         timer.join()
         for worker in workers:
             worker.join()
+
+        if self.failed_queue and self.failed_queue.qsize > 0:
+            flag = input("%s %d tasks failed, re-run failed tasks? (y/n): " %(WARN, self.failed_queue.qsize))
+            if flag in ['y', 'Y']:
+                self.task_queue = self.failed_queue
+                self.task_queue.tot_size = self.task_queue.qsize
+                self.num_threads = self._get_num_threads()
+                self.failed_queue = TaskQueue()
+                return self.crawl()
 
         results = []
         if self.has_result:
