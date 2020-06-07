@@ -161,7 +161,7 @@ optional arguments:
 
 ## Releases
 
--   v0.1.0: First release with basic classes.
+-   v0.1.1: First release with basic classes.
 
 ## License
 
