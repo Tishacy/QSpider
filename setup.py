@@ -13,7 +13,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(),
     include_package_data=True,
-    install_requires=[],
+    install_requires=['termcolor>=1.1.0','colorama>=0.4.3'],
     entry_points={
         'console_scripts': [
             'genqspider=qspider.core:genqspider'
