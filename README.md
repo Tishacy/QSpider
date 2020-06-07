@@ -1,6 +1,6 @@
 # Spider
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](https://opensource.org/licenses/MIT) [![Pyversion](https://img.shields.io/badge/python-3.x-green)](https://pypi.org/project/qspider/) [![Version](https://img.shields.io/badge/pypi-v0.1.0-red)](https://pypi.org/project/qspider)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](https://opensource.org/licenses/MIT) [![Pyversion](https://img.shields.io/badge/python-3.x-green)](https://pypi.org/project/qspider/) [![Version](https://img.shields.io/badge/pypi-v0.1.1-red)](https://pypi.org/project/qspider)
 
 Blocking queue crawler module for writing multi-threaded crawlers easily.
 
