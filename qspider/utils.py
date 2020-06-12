@@ -2,7 +2,9 @@
 import os
 import time
 import datetime
+import itertools
 from termcolor import colored
+from threading import Thread
 
 def display_progress(start_time, cur_size, tot_size, ncols=35, prog_char='█', desc=None):
     perc = cur_size / tot_size
@@ -37,3 +39,23 @@ ERROR = colored('[Error]', 'red')
 PROGRESS_DESC_STRS = '←↖↑↗→↘↓↙'
 PROGRESS_DESCS = [colored('[ %s ]' %(desc), 'yellow') for desc in PROGRESS_DESC_STRS]
 DONE_DESC = colored('[ ✔ ]', 'green')
+
+
+class Timer(Thread):
+    def __init__(self, task_queue, fps=0.1):
+        Thread.__init__(self)
+        self.task_queue = task_queue
+        self.tot_size = task_queue.tot_size.value
+        self.fps = fps
+
+    def run(self):
+        start_time = time.time()
+        for desc in itertools.cycle(PROGRESS_DESCS):
+            cur_size = self.task_queue.num_task_done.value
+            desc = desc if cur_size < self.tot_size else DONE_DESC
+            # desc = colored("[ %s ]" %(desc), 'green')
+            display_progress(start_time, cur_size, self.tot_size, prog_char='#', desc=desc)
+            if (cur_size == self.tot_size):
+                break
+            time.sleep(self.fps)
+

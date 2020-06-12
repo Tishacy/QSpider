@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from qspider.core import QSpider, Task
+from qspider.core import ThreadManager, Task
 
-class {0}(QSpider):
+class {0}(ThreadManager):
     def __init__(self, has_result=False, add_failed=True):
         self.name = "{1}"
         self.has_result = has_result
@@ -21,4 +21,4 @@ class {0}(QSpider):
 if __name__=="__main__":
     qspider = {0}()
     qspider.test()
-    # qspider.crawl()
+    # qspider.run()
