@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 from .core import *
 
-# Example of multi-threading
 def test_of_thread():
+    """Example of multi-threading"""
     import requests, random
 
     class ThreadTask(Task):
@@ -22,11 +22,10 @@ def test_of_thread():
 
 mp.freeze_support()
 
-
-# Example of multi-processing
 import random
 
 class ProcessTask(Task):
+    """Example of multi-processing"""
     def __init__(self, task_source):
         Task.__init__(self, task_source)
     
@@ -44,6 +43,6 @@ def test_of_processing():
     print(len(results))
 
 if __name__=="__main__":
-    # test_of_thread()
-    test_of_processing()
+    test_of_thread()
+    # test_of_processing()
 

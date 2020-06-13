@@ -1,8 +1,8 @@
 # QSpider
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](https://opensource.org/licenses/MIT) [![Pyversion](https://img.shields.io/badge/python-3.x-green)](https://pypi.org/project/qspider/) [![Version](https://img.shields.io/badge/pypi-v0.1.1-red)](https://pypi.org/project/qspider)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](https://opensource.org/licenses/MIT) [![Pyversion](https://img.shields.io/badge/python-3.x-green)](https://pypi.org/project/qspider/) [![Version](https://img.shields.io/badge/pypi-v0.1.2-red)](https://pypi.org/project/qspider)
 
-Blocking queue crawler module for writing multi-threaded crawlers easily.
+An easy to use tools module for writing multi-thread and multi-process programs.
 
 ## Install
 
@@ -17,9 +17,9 @@ $ pip install qspider
 ### Using Module
 
 ```python
-# 1. import class QSpider and Task from qspider.core module 
+# 1. import class QSpider and Task from qspider module 
 #   and other modules.
-from qspider.core import QSpider, Task
+from qspider import QSpider, Task
 import requests
 
 # 2. Define a list of task source.
@@ -47,7 +47,7 @@ class TestTask(Task):
       
 # 4. Create the QSpider and run it.
 test_spider = QSpider(source, TestTask, has_result=True)
-results = test_spider.crawl()
+results = test_spider.run()
 print(results)
 ```
 
@@ -66,13 +66,14 @@ Create a QSpider using command:
 
 ```bash
 $ genqspider -h
-usage: Generate your qspider based on templates [-h] name
+usage: Generate your qspider based on templates [-h] [-p] name
 
 positional arguments:
-  name        Your spider name
+  name           Your spider name
 
 optional arguments:
-  -h, --help  show this help message and exit
+  -h, --help     show this help message and exit
+  -p, --process  Using multi-process instead of multi-thread template
 ```
 
 #### Example
@@ -91,9 +92,9 @@ optional arguments:
     ```python
     # -*- coding: utf-8 -*-
     
-    from qspider.core import QSpider, Task
+    from qspider import ThreadManager, Task
     
-    class TestSpider(QSpider):
+    class TestSpider(ThreadManager):
         def __init__(self, has_result=False, add_failed=True):
             self.name = "test"
             self.has_result = has_result
@@ -112,7 +113,7 @@ optional arguments:
     if __name__=="__main__":
         qspider = TestSpider()
         qspider.test()
-        # qspider.crawl()
+        # qspider.run()
     ```
 
 3. Modify your source list with the line `self.source = [0]`, and how you gonna process the `task_source` in the method `QTask.run` .
@@ -146,7 +147,7 @@ optional arguments:
       	# 3. 'has_result' is True when there are values returned in QTask.run method.
         qspider = TestSpider(has_result=True)
         # 4. receive the results after run the qspider.
-        results = qspider.crawl()
+        results = qspider.run()
         print(results)
     ```
 
@@ -162,6 +163,7 @@ optional arguments:
 ## Releases
 
 -   v0.1.1: First release with basic classes.
+-   v0.1.2: Reconstruct code, add ThreadManager, ProcessManager and other tool classes.
 
 ## License
 

@@ -5,10 +5,10 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="qspider",
-    version="0.1.1",
+    version="0.1.2",
     author="Tishacy",
     author_email="",
-    description="Blocking queue spider wrapper",
+    description="An easy to use tools module for writing multi-thread and multi-process programs.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(),

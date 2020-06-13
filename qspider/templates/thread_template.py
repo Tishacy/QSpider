@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from qspider.core import ThreadManager, Task
+from qspider import ThreadManager, Task
 
 class {0}(ThreadManager):
     def __init__(self, has_result=False, add_failed=True):
