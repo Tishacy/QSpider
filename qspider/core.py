@@ -272,8 +272,12 @@ class BaseManager(ABC):
         """Input the number of workers in the command line."""
         print(INPUT, end="")
         num_workers_str = input(" Number of workers: ")
-        return int(num_workers_str)
-
+        try:
+            num_workers = int(num_workers_str)
+            return num_workers
+        except Exception as e:
+            print('%s %s' %(WARN, e))
+            return self._get_num_workers()
 
 # Mult-threading 
 class ThreadTaskQueue(BaseQueue):
