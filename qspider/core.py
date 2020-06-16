@@ -364,7 +364,7 @@ class ProcessTaskQueue(BaseQueue):
             iterable types. Elements the tasks should be instances of the
             subclass of Task class, which has a run method."""
     def __init__(self, tasks=[]):
-        BaseQueue.__init__(self, 'process', mp.JoinableQueue, mp.Lock, tasks)
+        BaseQueue.__init__(self, 'process', mp.Manager().Queue, mp.Lock, tasks)
 
 class ProcessWorker(mp.Process, BaseWorker):
     """A process worker class which implements a special Producer/Consumer
@@ -421,7 +421,7 @@ class ProcessManager(BaseManager):
                              task_cls, 
                              ProcessWorker, 
                              ProcessTaskQueue, 
-                             mp.JoinableQueue,
+                             mp.Manager().Queue,
                              has_result, 
                              num_workers,
                              add_failed)
