@@ -27,7 +27,8 @@ class SharedCounter:
     def increment(self, n=1):
         """Increment the counter by n (default = 1)."""
         if self.counter_type == 'thread':
-            self.count += n
+            with td.Lock():
+                self.count += n
         else:
             with self.count.get_lock():
                 self.count.value += n
@@ -364,7 +365,8 @@ class ProcessTaskQueue(BaseQueue):
             iterable types. Elements the tasks should be instances of the
             subclass of Task class, which has a run method."""
     def __init__(self, tasks=[]):
-        BaseQueue.__init__(self, 'process', mp.Manager().Queue, mp.Lock, tasks)
+        # BaseQueue.__init__(self, 'process', mp.Manager().Queue, mp.Lock, tasks)
+        BaseQueue.__init__(self, 'process', mp.Manager().Queue, mp.Manager().Lock, tasks)
 
 class ProcessWorker(mp.Process, BaseWorker):
     """A process worker class which implements a special Producer/Consumer
