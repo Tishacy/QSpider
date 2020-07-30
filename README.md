@@ -164,6 +164,7 @@ optional arguments:
 
 -   v0.1.1: First release with basic classes.
 -   v0.1.2: Reconstruct code, add ThreadManager, ProcessManager and other tool classes.
+-   v0.1.3: Fix multiprocess locking bug on Windows.
 
 ## License
 
