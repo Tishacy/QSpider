@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="qspider",
-    version="0.1.3",
+    version="0.1.4",
     author="Tishacy",
     author_email="",
     description="An easy to use tools module for writing multi-thread and multi-process programs.",
@@ -13,7 +13,11 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(),
     include_package_data=True,
-    install_requires=['termcolor>=1.1.0','colorama>=0.4.3'],
+    install_requires=[
+        'termcolor>=1.1.0',
+        'colorama>=0.4.3',
+        'colored>=1.4.2'
+    ],
     entry_points={
         'console_scripts': [
             'genqspider=qspider.core:genqspider'

@@ -1,6 +1,6 @@
 # QSpider
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](https://opensource.org/licenses/MIT) [![Pyversion](https://img.shields.io/badge/python-3.x-green)](https://pypi.org/project/qspider/) [![Version](https://img.shields.io/badge/pypi-v0.1.2-red)](https://pypi.org/project/qspider)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](https://opensource.org/licenses/MIT) [![Pyversion](https://img.shields.io/badge/python-3.x-green)](https://pypi.org/project/qspider/) [![Version](https://img.shields.io/badge/pypi-v0.1.3-red)](https://pypi.org/project/qspider)
 
 An easy to use tools module for writing multi-thread and multi-process programs.
 
