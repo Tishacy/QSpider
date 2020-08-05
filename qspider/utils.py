@@ -25,6 +25,8 @@ def display_progress(start_time, cur_size, tot_size, ncols=None, prog_char='━'
         
     """
     ncols = ncols or shutil.get_terminal_size()[0]
+    unprog_char = ' ' if os.name == 'nt' else prog_char
+
     perc = cur_size / tot_size
     desc_str = '%s ' %(desc) if desc else ''
     cur_time = time.time()
@@ -45,7 +47,7 @@ def display_progress(start_time, cur_size, tot_size, ncols=None, prog_char='━'
     bar_len = ncols - len(status_column + percentage_column + ratio_column + time_column) + 14 * 5
     bar_column = '%s%s ' %(
         '%s%s%s' %(fg('green'), prog_char, attr('reset')) * int(perc * bar_len), 
-        '%s%s%s' %(fg(242), prog_char, attr('reset')) * int(bar_len - perc * bar_len), 
+        '%s%s%s' %(fg(242), unprog_char, attr('reset')) * int(bar_len - perc * bar_len), 
     )
     msg = status_column + percentage_column + bar_column + ratio_column + time_column
 
