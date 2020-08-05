@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import time
+import shutil
 import threading as td
 import multiprocessing as mp
 from queue import Queue
@@ -9,6 +10,7 @@ from colorama import init
 from .utils import *
 
 init()
+term_width, _ = shutil.get_terminal_size()
 
 # Base classes
 class SharedCounter:
@@ -163,10 +165,12 @@ class BaseWorker(ABC):
                 if self.failed_queue:
                     self.failed_queue.put(task)
                     self.task_queue.task_done()
-                    print("%s Task went wrong and added it into failed queue: %s  " %(ERROR, task))
+                    msg = "%s Task went wrong and added it into failed queue: %s" %(ERROR, task)
+                    print("%s%s" %(msg, ' ' * (term_width - len(msg) + 3)))
                 else:
                     self.task_queue.put(task)
-                    print("%s Task went wrong and added it into task queue: %s  " %(ERROR, task))
+                    msg = "%s Task went wrong and added it into task queue: %s" %(ERROR, task)
+                    print("%s%s" %(msg, ' ' * (term_width - len(msg) + 3)))
 
 class BaseManager(ABC):
     """An abstract manager class to manage all the queues and workers,
@@ -228,13 +232,16 @@ class BaseManager(ABC):
         self.res_queue = res_queue_cls() if has_result else None
         self.failed_queue = task_queue_cls() if not add_failed else None
     
-    def run(self):
+    def run(self, silent=False):
         """Run tasks in the task queue using multi-workers."""
-        print("%s %d tasks in total." %(INFO, len(self.tasks)))
+        if not silent:
+            msg = "%s %d tasks in total." %(INFO, len(self.tasks))
+            print("%s%s" %(msg, ' ' * (term_width - len(msg) + 3)))
         self.num_workers = self.num_workers or self._get_num_workers()
 
-        timer = Timer(self.task_queue, fps=.1)
-        timer.start()
+        if not silent:
+            timer = Timer(self.task_queue, fps=.1)
+            timer.start()
 
         workers = []
         for i in range(self.num_workers):
@@ -242,7 +249,8 @@ class BaseManager(ABC):
             worker.start()
             workers.append(worker)
         
-        timer.join()
+        if not silent:
+            timer.join()
         for worker in workers:
             worker.join()
 
