@@ -385,7 +385,8 @@ class ProcessTaskQueue(BaseQueue):
             subclass of Task class, which has a run method."""
     def __init__(self, tasks=[]):
         # BaseQueue.__init__(self, 'process', mp.Manager().Queue, mp.Lock, tasks)
-        BaseQueue.__init__(self, 'process', mp.Manager().Queue, mp.Manager().Lock, tasks)
+        # BaseQueue.__init__(self, 'process', mp.Manager().Queue, mp.Manager().Lock, tasks)
+        BaseQueue.__init__(self, 'process', mp.Queue, mp.Manager().Lock, tasks)  # Likely this is faster at putting tasks into task queue.
 
 class ProcessWorker(mp.Process, BaseWorker):
     """A process worker class which implements a special Producer/Consumer
