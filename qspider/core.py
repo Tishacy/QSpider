@@ -231,7 +231,7 @@ class BaseManager(ABC):
         self.res_queue_cls = res_queue_cls
         self.has_result = has_result
         self.num_workers = num_workers
-        if inspect.isfunction(self.task_cls):
+        if inspect.isfunction(self.task_cls) or inspect.ismethod(self.task_cls):
             self.tasks = [{'caller': self.task_cls, 'source': src_item} for src_item in self.source]
         else:
             self.tasks = [self.task_cls(src_item) for src_item in self.source]
