@@ -3,6 +3,7 @@ import time
 import shutil
 import threading as td
 import multiprocessing as mp
+import inspect
 from queue import Queue
 from abc import ABC, abstractmethod
 from colorama import init
@@ -157,7 +158,10 @@ class BaseWorker(ABC):
             if not task:
                 break
             try:
-                res = task.run()
+                if (type(task) == dict and 'caller' in task and 'source' in task):
+                    res = task['caller'](task['source'])
+                else:
+                    res = task.run()
                 if self.res_queue:
                     self.res_queue.put(res)
                 self.task_queue.task_done()
@@ -181,8 +185,9 @@ class BaseManager(ABC):
         :param source: (iterable) the sources that tasks in the task 
             queue need for running tasks.
 
-        :param task_cls: (subclass of Task or any class with a run method) 
-            task class to instantiate tasks.
+        :param task_cls: (subclass of Task or any class with a run method, 
+            function, method) 
+            task class to instantiate tasks or task function/ task method.
 
         :param worker_cls: (subclass of BaseWorker) worker class, which 
             could be the ThreadWorker or ProcessWorker class.
@@ -226,8 +231,10 @@ class BaseManager(ABC):
         self.res_queue_cls = res_queue_cls
         self.has_result = has_result
         self.num_workers = num_workers
-
-        self.tasks = [self.task_cls(src_item) for src_item in self.source]
+        if inspect.isfunction(self.task_cls):
+            self.tasks = [{'caller': self.task_cls, 'source': src_item} for src_item in self.source]
+        else:
+            self.tasks = [self.task_cls(src_item) for src_item in self.source]
         self.task_queue = task_queue_cls(self.tasks)
         self.res_queue = res_queue_cls() if has_result else None
         self.failed_queue = task_queue_cls() if not add_failed else None
@@ -275,7 +282,10 @@ class BaseManager(ABC):
     
     def test(self, index=0):
         """Test if the task.run method could run without any exceptions."""
-        return self.tasks[index].run()
+        task = self.tasks[index]
+        if type(task) == dict and 'caller' in task and 'source' in task:
+            return task['caller'](task['source'])
+        return task.run()
 
     def _get_num_workers(self):
         """Input the number of workers in the command line."""
@@ -329,8 +339,9 @@ class ThreadManager(BaseManager):
         :param source: (iterable) the sources that tasks in the task 
             queue need for running tasks.
 
-        :param task_cls: (subclass of Task or any class with a run method) 
-            task class to instantiate tasks.
+        :param task_cls: (subclass of Task or any class with a run method, 
+            function, method) 
+            task class to instantiate tasks or task function/ task method.
 
         :param has_result: optional (bool) whether there are returned values from 
             the task.run method.
@@ -406,8 +417,9 @@ class ProcessManager(BaseManager):
         :param source: (iterable) the sources that tasks in the task 
             queue need for running tasks.
 
-        :param task_cls: (subclass of Task or any class with a run method) 
-            task class to instantiate tasks.
+        :param task_cls: (subclass of Task or any class with a run method, 
+            function, method) 
+            task class to instantiate tasks or task function/ task method.
 
         :param has_result: optional (bool) whether there are returned values from 
             the task.run method.
