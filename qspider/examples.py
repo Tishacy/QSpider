@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from .core import *
+from .decorators import concurrent
 
+# Class examples
 def test_of_thread():
     """Example of multi-threading"""
     import requests, random
@@ -42,7 +44,32 @@ def test_of_processing():
     results = pm.run()
     print(len(results))
 
+
+# Decorator examples
+import requests, random
+
+def get_source():
+    return ['http://www.baidu.com' for i in range(500)]
+
+# Task class test
+@concurrent.thread_class(get_source(), has_result=True, add_failed=True)
+class MyTask(object):
+    def __init__(self, task_source):
+        Task.__init__(self, task_source)
+    
+    def run(self):
+        res = requests.get(self.task_source, timeout=5)
+        return res.status_code
+
+# Task fucntion test
+@concurrent.thread_func(get_source(), has_result=True)
+def my_task(task_source):
+    res = requests.get(task_source, timeout=5)
+    return res.status_code
+
+
 if __name__=="__main__":
     test_of_thread()
-    # test_of_processing()
-
+    test_of_processing()
+    MyTask().run()
+    my_task()
