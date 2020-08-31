@@ -1,6 +1,6 @@
 # QSpider
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](https://opensource.org/licenses/MIT) [![Pyversion](https://img.shields.io/badge/python-3.x-green)](https://pypi.org/project/qspider/) [![Version](https://img.shields.io/badge/pypi-v0.1.3-red)](https://pypi.org/project/qspider)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](https://opensource.org/licenses/MIT) [![Pyversion](https://img.shields.io/badge/python-3.x-green)](https://pypi.org/project/qspider/) [![Version](https://img.shields.io/badge/pypi-v0.1.5-red)](https://pypi.org/project/qspider)
 
 An easy to use tools module for writing multi-thread and multi-process programs.
 
@@ -12,159 +12,58 @@ QSpider could be easily installed using pip:
 $ pip install qspider
 ```
 
-## Usages
-
-### Using Module
+## Example
 
 ```python
-# 1. import class QSpider and Task from qspider module 
-#   and other modules.
-from qspider import QSpider, Task
 import requests
+from qspider import concurrent
 
-# 2. Define a list of task source.
-#   Each of the element in this source list is called 'task_source'.
-#   'task_source' could be any type, ie str, tuple, object, dict...,
-#   it could also be requests.Session or something else.
-source = ['https://www.baidu.com' for i in range(100)]
+# Define a source list for task function to parse.
+def get_source():
+    """Return a url list."""
+    return ['http://www.baidu.com' for i in range(500)]
 
-# 3. Create your own task (which need to extends Task).
-class TestTask(Task):
-    """A test task
-    
-    Attributes:
-        task_source: the source which needed in the task.
-          which is actually the 'task_source' in the source list.
+# Define the task function and add a thread_func decorator
+# The thread_func decorator needs a source list, and other options (num_workers, has_result ...) as arguments
+@concurrent.thread_func(source=get_source(), num_workers=100, has_result=True)
+def my_task(task_source):
+    """A customized task function.
+    Process the task_source and return the processed results.
+
+    Arguments
+    :param task_source: the elem in the source list, which is a url here.
+    :rtype: (int) A http status code.
     """
-    def __init__(self, task_source):
-        Task.__init__(self, task_source)
-    
-    def run(self):
-        # process the self.task_source here.
-        res = requests.get(self.task_source, timeout=3)
-        # return values needed
-        return res.status_code
-      
-# 4. Create the QSpider and run it.
-test_spider = QSpider(source, TestTask, has_result=True)
-results = test_spider.run()
+    url = task_source
+    res = requests.get(url, timeout=5)
+    return res.status_code
+
+# Execute the task function.
+results = my_task()
 print(results)
 ```
 
-Run the script and you'll get:
+Results of the example is as below:
 
 ```bash
-[Info] 100 tasks in total.
-[Input] Number of threads: 20
-[ ✔ ] 100% |███████████████████████████████████| 100/100 [eta-0:00:00, 2.5s, 40.8it/s]
-[200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, ... , 200]
+[Info] 500 tasks in total.
+[ ✔ ] 100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 500/500 [eta-0:00:00, 0.9s, 542.9it/s]
+[200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, ..., 200, 200, 200, 200]
 ```
 
-### Using command line
-
-Create a QSpider using command:
-
-```bash
-$ genqspider -h
-usage: Generate your qspider based on templates [-h] [-p] name
-
-positional arguments:
-  name           Your spider name
-
-optional arguments:
-  -h, --help     show this help message and exit
-  -p, --process  Using multi-process instead of multi-thread template
-```
-
-#### Example
-
-1.  Create a `test` crawler using QSpider.
-
-    ```bash
-    $ genqspider test
-    A qspider named test is initialized.
-    ```
-
-    A python script named `test.py` is created in your current directory.
-
-2. Open the `test.py`，And you'll get:
-
-    ```python
-    # -*- coding: utf-8 -*-
-    
-    from qspider import ThreadManager, Task
-    
-    class TestSpider(ThreadManager):
-        def __init__(self, has_result=False, add_failed=True):
-            self.name = "test"
-            self.has_result = has_result
-            self.add_failed = add_failed
-            self.source = [0]  # define your source list
-            super(TestSpider, self).__init__(self.source, self.QTask, has_result=self.has_result, add_failed=self.add_failed)
-    
-        class QTask(Task):
-            def __init__(self, task_source):
-                Task.__init__(self, task_source)
-                
-            def run(self):
-                # parse single task source
-                pass
-    
-    if __name__=="__main__":
-        qspider = TestSpider()
-        qspider.test()
-        # qspider.run()
-    ```
-
-3. Modify your source list with the line `self.source = [0]`, and how you gonna process the `task_source` in the method `QTask.run` .
-
-    ```python
-    # -*- coding: utf-8 -*-
-    import requests
-    from qspider.core import QSpider, Task
-    
-    class TestSpider(QSpider):
-        def __init__(self, has_result=False, add_failed=True):
-            self.name = "test"
-            self.has_result = has_result
-            self.add_failed = add_failed
-            # 1. define your source list
-            self.source = ['https://www.baidu.com' for i in range(100)]  
-            super(TestSpider, self).__init__(self.source, self.QTask, has_result=self.has_result, add_failed=self.add_failed)
-    
-        class QTask(Task):
-            def __init__(self, task_source):
-                Task.__init__(self, task_source)
-                
-            # 2. Modify the run method
-            def run(self):
-                # process the self.task_source here.
-                res = requests.get(self.task_source, timeout=3)
-                # return values needed
-                return res.status_code
-    
-    if __name__=="__main__":
-      	# 3. 'has_result' is True when there are values returned in QTask.run method.
-        qspider = TestSpider(has_result=True)
-        # 4. receive the results after run the qspider.
-        results = qspider.run()
-        print(results)
-    ```
-
-4. Run the script and you'll get:
-
-    ```bash
-    [Info] 100 tasks in total.
-    [Input] Number of threads: 20
-    [ ✔ ] 100% |███████████████████████████████████| 100/100 [eta-0:00:00, 2.5s, 40.8it/s]
-    [200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, ... , 200]
-    ```
 
 ## Releases
 
 -   v0.1.1: First release with basic classes.
 -   v0.1.2: Reconstruct code, add ThreadManager, ProcessManager and other tool classes.
 -   v0.1.3: Fix multiprocess locking bug on Windows.
+-   v0.1.4:
+    - Add silent argument in manager._run method.
+    - Enhance the display style of the progress message.
+-   v0.1.5:
+    - Make task be either a class, a function or a class method.
+    - Add concurrent decorators for convenient use.
+    - Add concurrent decorator examples.
 
 ## License
 

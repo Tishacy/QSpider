@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="qspider",
-    version="0.1.4",
+    version="0.1.5",
     author="Tishacy",
     author_email="",
     description="An easy to use tools module for writing multi-thread and multi-process programs.",
