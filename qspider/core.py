@@ -297,6 +297,12 @@ class BaseManager(ABC):
         except Exception as e:
             print('%s %s' %(WARN, e))
             return self._get_num_workers()
+    
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_traceback):
+        return False
 
 # Mult-threading 
 class ThreadTaskQueue(BaseQueue):
