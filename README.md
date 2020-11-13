@@ -1,6 +1,6 @@
 # QSpider
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](https://opensource.org/licenses/MIT) [![Pyversion](https://img.shields.io/badge/python-3.x-green)](https://pypi.org/project/qspider/) [![Version](https://img.shields.io/badge/pypi-v0.1.5-red)](https://pypi.org/project/qspider)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](https://opensource.org/licenses/MIT) [![Pyversion](https://img.shields.io/badge/python-3.x-green)](https://pypi.org/project/qspider/) [![Version](https://img.shields.io/badge/pypi-v0.1.6-red)](https://pypi.org/project/qspider)
 
 An easy to use tools module for writing multi-thread and multi-process programs.
 
@@ -64,6 +64,11 @@ Results of the example is as below:
     - Make task be either a class, a function or a class method.
     - Add concurrent decorators for convenient use.
     - Add concurrent decorator examples.
+-   v0.1.6:
+    - Update templates.
+    - Replace multiprocessing queue.
+    - Support with statement.
+    - Optimize displays in jupyter notebook and windows powershell.
 
 ## License
 
