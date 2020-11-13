@@ -1,17 +1,27 @@
 # -*- coding: utf-8 -*-
-import time
+import os
 import shutil
+import argparse
+import inspect
 import threading as td
 import multiprocessing as mp
-import inspect
 from queue import Queue
 from abc import ABC, abstractmethod
 from colorama import init
 
-from .utils import *
+from .utils import INFO
+from .utils import WARN
+from .utils import ERROR
+from .utils import INPUT
+from .utils import Timer
+from .utils import Thread
+from .utils import get_resource_path
+from .utils import format_class_name
+
 
 init()
 term_width, _ = shutil.get_terminal_size()
+
 
 # Base classes
 class SharedCounter:
@@ -19,10 +29,11 @@ class SharedCounter:
     This counter is a thread-safe counter if counter_type is 'thread',
     or a process-safe counter if counter_type is 'process'. 
 
-    Attritbutes
+    Attributes
         :param n: optional (int) the initial value of the counter.
         :param counter_type: optional (str) either to be 'thread' or 'process'
     """
+
     def __init__(self, n=0, counter_type='thread'):
         self.counter_type = counter_type
         self.count = n if self.counter_type == 'thread' else mp.Value('i', n)
@@ -44,6 +55,7 @@ class SharedCounter:
         else:
             return self.count.value
 
+
 class BaseQueue(ABC):
     """An abstract base queue based on multiple queue classes.
     This BaseQueue could be a FIFO/LIFO queue when passing different
@@ -63,7 +75,10 @@ class BaseQueue(ABC):
             iterable types. Elements the tasks should be instances of the
             subclass of Task class, which has a run method.
     """
-    def __init__(self, counter_type, queue_cls, lock_cls, tasks=[]):
+
+    def __init__(self, counter_type, queue_cls, lock_cls, tasks=None):
+        if tasks is None:
+            tasks = []
         self.counter_type = counter_type
         self.queue = queue_cls()
         self.lock = lock_cls()
@@ -72,7 +87,7 @@ class BaseQueue(ABC):
             self.put(task_source)
         self.num_task_done = SharedCounter(0, self.counter_type)
         self.tot_size = self.qsize
-    
+
     def put(self, task):
         """Put a Task instance into the queue.
         :param task: (Task or its subclass) a Task instance
@@ -80,7 +95,7 @@ class BaseQueue(ABC):
         with self.lock:
             self.queue.put(task)
             self.qsize.increment(1)
-    
+
     def get(self):
         """Get a Task instance out of the queue
         :rtype (Task or its subclass): 
@@ -98,7 +113,7 @@ class BaseQueue(ABC):
         """
         with self.lock:
             self.num_task_done.increment(1)
-    
+
     def empty(self):
         """Return if the queue is empty.
         :rtype (bool): whether the queue is empty
@@ -117,15 +132,17 @@ class Task(ABC):
         :param task_source: (object) the source that the task needs when 
             then task run. task_source could be any type.
     """
+
     def __init__(self, task_source):
         self.task_source = task_source
-    
+
     @abstractmethod
     def run(self):
         """Run method in a task"""
 
     def __str__(self):
-        return "Task{source=%s}" %(str(self.task_source))
+        return "Task{source=%s}" % (str(self.task_source))
+
 
 class BaseWorker(ABC):
     """An abstract worker class which implements a special Producer/Consumer
@@ -141,16 +158,17 @@ class BaseWorker(ABC):
     
     Attributes
         :param task_queue: (subclass of BaseQueue) task queue contains task instances.
-        :param res_queue: optioanl (Queue or its subclass) results queue contains the results 
+        :param res_queue: optional (Queue or its subclass) results queue contains the results
             returned by the task.run method.
         :param failed_queue: optional (subclass of BaseQueue) failed queue contains failed 
             task instances.
     """
+
     def __init__(self, task_queue, res_queue=None, failed_queue=None):
         self.task_queue = task_queue
         self.res_queue = res_queue
         self.failed_queue = failed_queue
-    
+
     def _run(self):
         """Run tasks in the task queue until the queue is empty."""
         while True:
@@ -158,7 +176,7 @@ class BaseWorker(ABC):
             if not task:
                 break
             try:
-                if (type(task) == dict and 'caller' in task and 'source' in task):
+                if type(task) == dict and 'caller' in task and 'source' in task:
                     res = task['caller'](task['source'])
                 else:
                     res = task.run()
@@ -169,12 +187,13 @@ class BaseWorker(ABC):
                 if self.failed_queue:
                     self.failed_queue.put(task)
                     self.task_queue.task_done()
-                    msg = "%s Task went wrong and added it into failed queue: %s" %(ERROR, task)
-                    print("%s%s" %(msg, ' ' * (term_width - len(msg) + 3)))
+                    msg = "%s Task went wrong and added it into failed queue: %s. Error message: %s" % (ERROR, task, e)
+                    print("%s%s" % (msg, ' ' * (term_width - len(msg) + 3)))
                 else:
                     self.task_queue.put(task)
-                    msg = "%s Task went wrong and added it into task queue: %s" %(ERROR, task)
-                    print("%s%s" %(msg, ' ' * (term_width - len(msg) + 3)))
+                    msg = "%s Task went wrong and added it into task queue: %s. Error message: %s" % (ERROR, task, e)
+                    print("%s%s" % (msg, ' ' * (term_width - len(msg) + 3)))
+
 
 class BaseManager(ABC):
     """An abstract manager class to manage all the queues and workers,
@@ -199,7 +218,7 @@ class BaseManager(ABC):
 
         :param has_result: optional (bool) whether there are returned values from 
             the task.run method.
-            Ther manager will instantiate the results queue if has_result is True, 
+            The manager will instantiate the results queue if has_result is True,
             otherwise the result queue is always None. Default is False.
 
         :param num_workers: optional (int or None) number of workers, could be None 
@@ -215,6 +234,7 @@ class BaseManager(ABC):
             True: Put the failed tasks back into the task queue.
             False: Put the failed tasks into the failed queue.
     """
+
     def __init__(self, source,
                  task_cls,
                  worker_cls,
@@ -223,7 +243,7 @@ class BaseManager(ABC):
                  has_result=False,
                  num_workers=None,
                  add_failed=True):
-        
+
         self.source = source
         self.task_cls = task_cls
         self.worker_cls = worker_cls
@@ -238,14 +258,15 @@ class BaseManager(ABC):
         self.task_queue = task_queue_cls(self.tasks)
         self.res_queue = res_queue_cls() if has_result else None
         self.failed_queue = task_queue_cls() if not add_failed else None
-    
+
     def run(self, silent=False):
         """Run tasks in the task queue using multi-workers."""
         if not silent:
-            msg = "%s %d tasks in total." %(INFO, len(self.tasks))
-            print("%s%s" %(msg, ' ' * (term_width - len(msg) + 3)))
+            msg = "%s %d tasks in total." % (INFO, len(self.tasks))
+            print("%s%s" % (msg, ' ' * (term_width - len(msg) + 3)))
         self.num_workers = self.num_workers or self._get_num_workers()
 
+        timer = None
         if not silent:
             timer = Timer(self.task_queue, fps=.1)
             timer.start()
@@ -255,14 +276,14 @@ class BaseManager(ABC):
             worker = self.worker_cls(self.task_queue, self.res_queue, self.failed_queue)
             worker.start()
             workers.append(worker)
-        
+
         if not silent:
             timer.join()
         for worker in workers:
             worker.join()
 
         if self.failed_queue and self.failed_queue.qsize.value > 0:
-            flag = input("%s %d tasks failed, re-run failed tasks? (y/n): " %(WARN, self.failed_queue.qsize.value))
+            flag = input("%s %d tasks failed, re-run failed tasks? (y/n): " % (WARN, self.failed_queue.qsize.value))
             if flag in ['y', 'Y']:
                 self.task_queue = self.failed_queue
                 self.task_queue.tot_size = self.task_queue.qsize
@@ -279,7 +300,7 @@ class BaseManager(ABC):
     def crawl(self):
         """[Deprecated] Use run method instead"""
         return self.run()
-    
+
     def test(self, index=0):
         """Test if the task.run method could run without any exceptions."""
         task = self.tasks[index]
@@ -295,16 +316,17 @@ class BaseManager(ABC):
             num_workers = int(num_workers_str)
             return num_workers
         except Exception as e:
-            print('%s %s' %(WARN, e))
+            print('%s %s' % (WARN, e))
             return self._get_num_workers()
-    
+
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_traceback):
         return False
 
-# Mult-threading 
+
+# Multi-threading
 class ThreadTaskQueue(BaseQueue):
     """A thread task queue contains tasks.
 
@@ -312,9 +334,13 @@ class ThreadTaskQueue(BaseQueue):
         :param tasks: optional (iterable) the initial tasks, could be any
             iterable types. Elements the tasks should be instances of the
             subclass of Task class, which has a run method."""
-    def __init__(self, tasks=[]):
+
+    def __init__(self, tasks=None):
+        if tasks is None:
+            tasks = []
         BaseQueue.__init__(self, 'thread', Queue, td.Lock, tasks)
-    
+
+
 class ThreadWorker(Thread, BaseWorker):
     """A thread worker class which implements a special Producer/Consumer
     model, which the instance is a Thread instance. 
@@ -331,12 +357,14 @@ class ThreadWorker(Thread, BaseWorker):
             returned by the task.run method.
         :param failed_queue: (subclass of BaseQueue) failed queue contains failed task instances.
     """
+
     def __init__(self, task_queue, res_queue=None, failed_queue=None):
         Thread.__init__(self)
         BaseWorker.__init__(self, task_queue, res_queue, failed_queue)
 
     def run(self):
         self._run()
+
 
 class ThreadManager(BaseManager):
     """A multi-thread manager class to manage all the queues and workers.
@@ -351,7 +379,7 @@ class ThreadManager(BaseManager):
 
         :param has_result: optional (bool) whether there are returned values from 
             the task.run method.
-            Ther manager will instantiate the results queue if has_result is True, 
+            The manager will instantiate the results queue if has_result is True,
             otherwise the result queue is always None. Default is False.
 
         :param num_workers: optional (int or None) number of workers, could be None or int values:
@@ -366,15 +394,17 @@ class ThreadManager(BaseManager):
             True: Put the failed tasks back into the task queue.
             False: Put the failed tasks into the failed queue.
     """
+
     def __init__(self, source, task_cls, has_result=False, num_workers=None, add_failed=True):
-        BaseManager.__init__(self, source, 
-                             task_cls, 
-                             ThreadWorker, 
-                             ThreadTaskQueue, 
+        BaseManager.__init__(self, source,
+                             task_cls,
+                             ThreadWorker,
+                             ThreadTaskQueue,
                              Queue,
-                             has_result, 
+                             has_result,
                              num_workers,
                              add_failed)
+
 
 class QSpider(ThreadManager):
     def __init__(self, source, task_cls, has_result=False, num_workers=None, add_failed=True):
@@ -389,10 +419,15 @@ class ProcessTaskQueue(BaseQueue):
         :param tasks: optional (iterable) the initial tasks, could be any
             iterable types. Elements the tasks should be instances of the
             subclass of Task class, which has a run method."""
-    def __init__(self, tasks=[]):
+
+    def __init__(self, tasks=None):
+        if tasks is None:
+            tasks = []
         # BaseQueue.__init__(self, 'process', mp.Manager().Queue, mp.Lock, tasks)
         # BaseQueue.__init__(self, 'process', mp.Manager().Queue, mp.Manager().Lock, tasks)
-        BaseQueue.__init__(self, 'process', mp.Queue, mp.Manager().Lock, tasks)  # Likely this is faster at putting tasks into task queue.
+        BaseQueue.__init__(self, 'process', mp.Queue, mp.Manager().Lock,
+                           tasks)  # Likely this is faster at putting tasks into task queue.
+
 
 class ProcessWorker(mp.Process, BaseWorker):
     """A process worker class which implements a special Producer/Consumer
@@ -410,12 +445,14 @@ class ProcessWorker(mp.Process, BaseWorker):
             returned by the task.run method.
         :param failed_queue: optional (subclass of BaseQueue) failed queue contains failed task instances.
     """
+
     def __init__(self, task_queue, res_queue=None, failed_queue=None):
         mp.Process.__init__(self)
         BaseWorker.__init__(self, task_queue, res_queue, failed_queue)
 
     def run(self):
         self._run()
+
 
 class ProcessManager(BaseManager):
     """A multi-process manager class to manage all the queues and workers.
@@ -430,7 +467,7 @@ class ProcessManager(BaseManager):
 
         :param has_result: optional (bool) whether there are returned values from 
             the task.run method.
-            Ther manager will instantiate the results queue if has_result is True, 
+            The manager will instantiate the results queue if has_result is True,
             otherwise the result queue is always None. Default is False.
 
         :param num_workers: optional (int or None) number of workers, could be None or int values:
@@ -445,40 +482,41 @@ class ProcessManager(BaseManager):
             True: Put the failed tasks back into the task queue.
             False: Put the failed tasks into the failed queue.
     """
+
     def __init__(self, source, task_cls, has_result=False, num_workers=None, add_failed=True):
-        BaseManager.__init__(self, source, 
-                             task_cls, 
-                             ProcessWorker, 
-                             ProcessTaskQueue, 
+        BaseManager.__init__(self, source,
+                             task_cls,
+                             ProcessWorker,
+                             ProcessTaskQueue,
                              mp.Manager().Queue,
-                             has_result, 
+                             has_result,
                              num_workers,
                              add_failed)
 
 
 # Command line tool
-import argparse, os
-
 def genqspider():
     """Generate your qspider based on templates.
     """
     parser = argparse.ArgumentParser("Generate your qspider based on templates")
     parser.add_argument('name', help="Your spider name")
-    parser.add_argument('-p', '--process', action='store_true', help="Using multi-process instead of multi-thread template")
+    parser.add_argument('-p', '--process', action='store_true',
+                        help="Using multi-process instead of multi-thread template")
     args = parser.parse_args()
 
     spider_path = './{0}.py'.format(args.name)
     if os.path.isfile(spider_path):
-        raise ValueError("File %s.py already exists, please change your spider name." %(args.name))
+        raise ValueError("File %s.py already exists, please change your spider name." % args.name)
 
-    template_fpath = get_resource_path('templates/process_template.py') if args.process else get_resource_path('templates/thread_template.py')
+    template_fpath = get_resource_path('templates/process_template.py') if args.process else get_resource_path(
+        'templates/thread_template.py')
     templ_path = get_resource_path(template_fpath)
     class_name = format_class_name(args.name)
     templ = open(templ_path, 'r', encoding='utf-8').read().format(class_name, args.name)
     with open(spider_path, 'w', encoding='utf-8') as f:
         f.write(templ)
-    print("A qspider named %s is initialized." %(args.name))
+    print("A qspider named %s is initialized." % args.name)
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     genqspider()
-    

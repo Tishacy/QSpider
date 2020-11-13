@@ -138,8 +138,12 @@ dmypy.json
 cython_debug/
 
 # Test file
+test/
 test.*
 data.json
 
 # VSocde
 .vscode/
+
+# Idea
+.idea/

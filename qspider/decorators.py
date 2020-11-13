@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-import functools, inspect
+import functools
 
-from .core import ThreadManager, ProcessManager, Task
+from .core import ThreadManager
+
 
 class concurrent(object):
     """Some concurrent decorators.
@@ -19,7 +20,7 @@ class concurrent(object):
         """
         def decorator(task_cls):
             @functools.wraps(task_cls)
-            def wrapper(*wargs, **wkwags):
+            def wrapper():
                 thread_manager = ThreadManager(source, task_cls, *args, **kwargs)
                 return thread_manager
             return wrapper
@@ -38,7 +39,7 @@ class concurrent(object):
         """
         def decorator(task_cls):
             @functools.wraps(task_cls)
-            def wrapper(*wargs, **wkwags):
+            def wrapper():
                 thread_manager = ThreadManager(source, task_cls, *args, **kwargs)
                 return thread_manager.run()
             return wrapper
