@@ -39,8 +39,8 @@ class concurrent(object):
         """
         def decorator(task_cls):
             @functools.wraps(task_cls)
-            def wrapper():
+            def wrapper(*wargs, **wkwargs):
                 thread_manager = ThreadManager(source, task_cls, *args, **kwargs)
-                return thread_manager.run()
+                return thread_manager.run(*wargs, **wkwargs)
             return wrapper
         return decorator

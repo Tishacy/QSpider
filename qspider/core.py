@@ -3,11 +3,11 @@ import os
 import shutil
 import argparse
 import inspect
+import logging
 import threading as td
 import multiprocessing as mp
 from queue import Queue
 from abc import ABC, abstractmethod
-from colorama import init
 
 from .utils import INFO
 from .utils import WARN
@@ -18,8 +18,13 @@ from .utils import Thread
 from .utils import get_resource_path
 from .utils import format_class_name
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
-init()
+if os.name == 'nt':
+    from colorama import init
+    init()
+
 term_width, _ = shutil.get_terminal_size()
 
 
@@ -188,11 +193,11 @@ class BaseWorker(ABC):
                     self.failed_queue.put(task)
                     self.task_queue.task_done()
                     msg = "%s Task went wrong and added it into failed queue: %s. Error message: %s" % (ERROR, task, e)
-                    print("%s%s" % (msg, ' ' * (term_width - len(msg) + 3)))
+                    logger.error("\r%s%s" % (msg, ' ' * (term_width - len(msg))))
                 else:
                     self.task_queue.put(task)
                     msg = "%s Task went wrong and added it into task queue: %s. Error message: %s" % (ERROR, task, e)
-                    print("%s%s" % (msg, ' ' * (term_width - len(msg) + 3)))
+                    logger.warning("\r%s%s" % (msg, ' ' * (term_width - len(msg))))
 
 
 class BaseManager(ABC):
@@ -261,9 +266,8 @@ class BaseManager(ABC):
 
     def run(self, silent=False):
         """Run tasks in the task queue using multi-workers."""
-        if not silent:
-            msg = "%s %d tasks in total." % (INFO, len(self.tasks))
-            print("%s%s" % (msg, ' ' * (term_width - len(msg) + 3)))
+        msg = "%s %d tasks in total." % (INFO, len(self.tasks))
+        print(msg)
         self.num_workers = self.num_workers or self._get_num_workers()
 
         timer = None
@@ -283,7 +287,10 @@ class BaseManager(ABC):
             worker.join()
 
         if self.failed_queue and self.failed_queue.qsize.value > 0:
-            flag = input("%s %d tasks failed, re-run failed tasks? (y/n): " % (WARN, self.failed_queue.qsize.value))
+            flag = ''
+            while flag not in ['y', 'Y', 'n', 'N']:
+                flag = input("%s %d tasks failed, re-run failed tasks? (y/n): " % (WARN, self.failed_queue.qsize.value))
+
             if flag in ['y', 'Y']:
                 self.task_queue = self.failed_queue
                 self.task_queue.tot_size = self.task_queue.qsize
@@ -316,7 +323,7 @@ class BaseManager(ABC):
             num_workers = int(num_workers_str)
             return num_workers
         except Exception as e:
-            print('%s %s' % (WARN, e))
+            logger.warning('%s %s' % (WARN, e))
             return self._get_num_workers()
 
     def __enter__(self):
@@ -515,7 +522,7 @@ def genqspider():
     templ = open(templ_path, 'r', encoding='utf-8').read().format(class_name, args.name)
     with open(spider_path, 'w', encoding='utf-8') as f:
         f.write(templ)
-    print("A qspider named %s is initialized." % args.name)
+    logger.info("A qspider named %s is initialized." % args.name)
 
 
 if __name__ == "__main__":

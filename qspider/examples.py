@@ -2,11 +2,14 @@
 import random
 import requests
 import multiprocessing as mp
+import logging
+
 from .core import Task
 from .core import ThreadManager
 from .core import ProcessManager
-
 from .decorators import concurrent
+
+logging.basicConfig(level=logging.INFO)
 
 
 # Class examples
@@ -20,12 +23,12 @@ def test_of_thread():
         def run(self):
             res = requests.get(self.task_source, timeout=5)
             if random.randint(0, 100) < 5:
-                raise Exception()
+                raise Exception("Random exception")
             return res.status_code
 
     source = ['http://www.baidu.com' for _ in range(500)]
     tm = ThreadManager(source, ThreadTask, has_result=True, add_failed=True)
-    results = tm.run()
+    results = tm.run(silent=False)
     print(len(results))
 
 
@@ -62,10 +65,11 @@ def get_source():
 @concurrent.thread_class(get_source(), has_result=True, add_failed=True)
 class MyTask(Task):
     def __init__(self, *args):
-        Task.__init__(self, args)
+        Task.__init__(self, *args)
 
     def run(self):
         res = requests.get(self.task_source, timeout=5)
+        logging.info(f"\rGET {self.task_source}, Response code: {res.status_code}")
         return res.status_code
 
 
@@ -79,5 +83,5 @@ def my_task(task_source):
 if __name__ == "__main__":
     test_of_thread()
     test_of_processing()
-    MyTask().run()
-    my_task()
+    MyTask().run(silent=True)
+    my_task(silent=False)

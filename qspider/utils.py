@@ -4,9 +4,15 @@ import time
 import datetime
 import itertools
 import shutil
-from colored import fg
-from colored import attr
+import logging
+from termcolor import colored
 from threading import Thread
+
+logging.basicConfig(level=logging.INFO)
+
+if os.name == 'nt':
+    from colorama import init
+    init()
 
 
 def display_progress(start_time, cur_size, tot_size, ncols=None, prog_char='━', desc=None):
@@ -27,7 +33,8 @@ def display_progress(start_time, cur_size, tot_size, ncols=None, prog_char='━'
         
     """
     ncols = ncols or shutil.get_terminal_size()[0]
-    unprog_char = ' ' if os.name == 'nt' else prog_char
+    # unprog_char = ' ' if os.name == 'nt' else prog_char
+    unprog_char = prog_char
 
     perc = cur_size / tot_size
     desc_str = '%s ' % desc if desc else ''
@@ -39,21 +46,21 @@ def display_progress(start_time, cur_size, tot_size, ncols=None, prog_char='━'
 
     # format progress msg
     status_column = desc_str
-    percentage_column = '%s%3d%%%s ' % (fg('blue'), perc*100, attr('reset'))
-    ratio_column = '%s%s/%s%s ' % (fg('light_magenta'), cur_size, tot_size, attr('reset'))
+    percentage_column = colored('%3d%%' % (perc * 100), 'blue')
+    ratio_column = colored('%s/%s' % (cur_size, tot_size), "blue")
     time_column = '[eta-%s, %ss, %sit/s] ' % (
-        '%s%s%s' % (fg('yellow'), left_time_str, attr('reset')),
-        '%s%s%s' % (fg('yellow'), cost_time_str, attr('reset')),
-        '%s%.1f%s' % (fg('yellow'), rate, attr('reset')),
+        colored(left_time_str, "yellow"),
+        colored(cost_time_str, "yellow"),
+        colored("%.1f" % rate, "yellow")
     )
-    bar_len = ncols - len(status_column + percentage_column + ratio_column + time_column) + 14 * 5
-    bar_column = '%s%s ' % (
-        '%s%s%s' % (fg('green'), prog_char, attr('reset')) * int(perc * bar_len),
-        '%s%s%s' % (fg(242), unprog_char, attr('reset')) * int(bar_len - perc * bar_len),
+    bar_len = ncols - len(status_column + percentage_column + ratio_column + time_column) + 9 * 5
+    bar_column = '%s%s' % (
+        colored(prog_char * int(perc * bar_len), 'green'),
+        colored(unprog_char * int(bar_len - perc * bar_len), 'white')
     )
-    msg = status_column + percentage_column + bar_column + ratio_column + time_column
+    msg = f"{status_column} {percentage_column} {bar_column} {ratio_column} {time_column}"
 
-    print(msg + '\b' * len(msg), end='', flush=True)
+    print('\r' + msg, end='', flush=True)
     if cur_size == tot_size:
         print()
 
@@ -70,15 +77,15 @@ def get_resource_path(path):
     return os.path.join(dir_path, path)
 
 
-INFO = '%s[Info]%s' % (fg('green'), attr('reset'))
-INPUT = '%s[Input]%s' % (fg('green'), attr('reset'))
-WARN = '%s[Warn]%s' % (fg('yellow'), attr('reset'))
-ERROR = '%s[Error]%s' % (fg('red'), attr('reset'))
+INFO = colored('[Info]', 'green')
+ERROR = colored('[Error]', 'red')
+WARN = colored('[Warn]', 'yellow')
+INPUT = colored('[Input]', 'green')
 PROGRESS_DESC_STRS = '←↖↑↗→↘↓↙'
 PROGRESS_DESCS = [
-    '%s[ %s ]%s' % (fg('blue'), desc, attr('reset')) for desc in PROGRESS_DESC_STRS
+    colored('[ %s ]', 'blue') % desc for desc in PROGRESS_DESC_STRS
 ]
-DONE_DESC = '%s[ ✔ ]%s' % (fg('blue'), attr('reset'))
+DONE_DESC = colored('[ ✔ ]', "blue")
 
 
 class Timer(Thread):
@@ -89,11 +96,12 @@ class Timer(Thread):
         :param task_queue: (subclass of BaseQueue) task queue contains task instances.
         :param fps: optional (float) refresh rate. Default value is 0.1s.
     """
-    def __init__(self, task_queue, fps=0.1):
+    def __init__(self, task_queue, fps=0.1, ncols=None):
         Thread.__init__(self)
         self.task_queue = task_queue
         self.tot_size = task_queue.tot_size.value
         self.fps = fps
+        self.ncols = ncols
 
     def run(self):
         """Run the timer"""
@@ -101,8 +109,9 @@ class Timer(Thread):
         for desc in itertools.cycle(PROGRESS_DESCS):
             cur_size = self.task_queue.num_task_done.value
             desc = desc if cur_size < self.tot_size else DONE_DESC
-            prog_char = '#' if os.name == 'nt' else '━'  # ━ █
-            display_progress(start_time, cur_size, self.tot_size, prog_char=prog_char, desc=desc)
+            # prog_char = '#' if os.name == 'nt' else '━'  # ━ █
+            prog_char = '━'  # ━ █
+            display_progress(start_time, cur_size, self.tot_size, ncols=self.ncols, prog_char=prog_char, desc=desc)
             if cur_size == self.tot_size:
                 break
             time.sleep(self.fps)
